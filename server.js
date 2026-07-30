@@ -11,7 +11,8 @@ app.get('/',(req,res)=>{
   res.send('server is running')
 })
 
-//signup api
+//Stage 1
+//Signup API
 app.post('/signup',async (req,res)=>{
     try{
         const {email,password}=req.body
@@ -45,6 +46,8 @@ app.post('/signup',async (req,res)=>{
     }
 
 })
+
+//login API
 app.post('/login',async(req,res)=>{
     const {email,password}=req.body
 
@@ -63,7 +66,20 @@ app.post('/login',async(req,res)=>{
   })
 })
 
+//Stage 2
+//public route
+app.get('/public/info',(req,res)=>{
+    return res.status(200).json( {"message": "Welcome stranger! This info is public." })
+})
+//private route
+app.get('/protected/profile',async(req,res)=>{
+       const bearer=req.headers.authorization
 
+       if(!bearer || !bearer.startsWith('Bearer ')){
+        return res.status(401).json({"message":"Access token required"})
+       }
+      return res.status(200).json({ message: 'Authorization header presented!' });
+})
 
 const server=app.listen(PORT ,()=>{
     console.log(`server is running on http://localhost:${PORT}`)
