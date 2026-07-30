@@ -6,6 +6,7 @@ const supabase=require('./supabaseClient')
 const app = express();
 app.use(express.json());
 const PORT =  8080;
+const swaggerUi = require('swagger-ui-express');
 app.get('/',(req,res)=>{
    // console.log("===> HIT CAME TO SERVER <===");
   res.send('server is running')
@@ -40,7 +41,7 @@ app.post('/auth/logout',middleware,async(req,res)=>{
 })
 //Stage 1
 //Signup API
-app.post('/signup',async (req,res)=>{
+app.post('/auth/signup',async (req,res)=>{
     try{
         const {email,password}=req.body
     if(!email){
@@ -75,7 +76,7 @@ app.post('/signup',async (req,res)=>{
 })
 
 //login API
-app.post('/login',async(req,res)=>{
+app.post('/auth/login',async(req,res)=>{
     const {email,password}=req.body
 
     if(!email || !password){
@@ -95,7 +96,7 @@ app.post('/login',async(req,res)=>{
 
 //Stage 2
 //public route
-app.get('/public/info',middleware,(req,res)=>{
+app.get('/public/info',(req,res)=>{
     return res.status(200).json( {"message": "Welcome stranger! This info is public." })
 })
 //private route
@@ -128,7 +129,114 @@ app.get('/protected/profile',middleware,async(req,res)=>{
 
   })
 })
-const server=app.listen(PORT ,()=>{
-    console.log(`server is running on http://localhost:${PORT}`)
-})
 
+// protected/dashboard
+app.get('/protected/dashboard', middleware, (req, res) => {
+  return res.status(200).json({
+    message: `Welcome to the private dashboard, ${req.user.email}!`
+  });
+});
+
+
+//swaggerUI
+
+const swaggerDocument = {
+  openapi: '3.0.0',
+  info: {
+    title: 'Auth Practice API',
+    version: '1.0.0',
+    description: 'Express.js & Supabase Auth API with Bearer Token protection'
+  },
+  components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT'
+      }
+    }
+  },
+  paths: {
+    '/public/info': {
+      get: {
+        summary: 'Public Info',
+        tags: ['Public'],
+        responses: { 200: { description: 'Success' } }
+      }
+    },
+    '/auth/signup': {
+      post: {
+        summary: 'Register new user',
+        tags: ['Auth'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  email: { type: 'string', example: 'testuser@example.com' },
+                  password: { type: 'string', example: 'password123' }
+                }
+              }
+            }
+          }
+        },
+        responses: { 201: { description: 'User Created' }, 400: { description: 'Bad Request' } }
+      }
+    },
+    '/auth/login': {
+      post: {
+        summary: 'User Login & get JWT token',
+        tags: ['Auth'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  email: { type: 'string', example: 'testuser@example.com' },
+                  password: { type: 'string', example: 'password123' }
+                }
+              }
+            }
+          }
+        },
+        responses: { 200: { description: 'Success' }, 401: { description: 'Unauthorized' } }
+      }
+    },
+    '/auth/logout': {
+      post: {
+        summary: 'User Logout',
+        tags: ['Auth'],
+        security: [{ bearerAuth: [] }],
+        responses: { 204: { description: 'No Content' }, 401: { description: 'Unauthorized' } }
+      }
+    },
+    '/protected/profile': {
+      get: {
+        summary: 'Get Private Profile',
+        tags: ['Protected'],
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Success' }, 401: { description: 'Unauthorized' } }
+      }
+    },
+    '/protected/dashboard': {
+      get: {
+        summary: 'Get Protected Dashboard',
+        tags: ['Protected'],
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Success' }, 401: { description: 'Unauthorized' } }
+      }
+    }
+  }
+};
+
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
+// Start Server
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Swagger Docs available at http://localhost:${PORT}/docs`);
+});
