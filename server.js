@@ -10,7 +10,34 @@ app.get('/',(req,res)=>{
    // console.log("===> HIT CAME TO SERVER <===");
   res.send('server is running')
 })
+//stage 4: Middleware protection & logout
 
+const middleware=async (req,res,next)=>{
+     const bearer=req.headers.authorization
+
+    if (!bearer || !bearer.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+  const toekn =bearer.split(' ')[1]
+  const {data:{user},error}=await supabase.auth.getUser(toekn)
+  if (error || !user) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+
+  // Attach verified user to request object
+  req.user = user;
+  next();
+}
+
+//logout
+app.post('/auth/logout',middleware,async(req,res)=>{
+    const{error}=await supabase.auth.signOut();
+     if (error) {
+    return res.status(400).json({ error: error.message });
+  }
+    return res.status(204).send();
+
+})
 //Stage 1
 //Signup API
 app.post('/signup',async (req,res)=>{
@@ -68,7 +95,7 @@ app.post('/login',async(req,res)=>{
 
 //Stage 2
 //public route
-app.get('/public/info',(req,res)=>{
+app.get('/public/info',middleware,(req,res)=>{
     return res.status(200).json( {"message": "Welcome stranger! This info is public." })
 })
 //private route
@@ -82,7 +109,7 @@ app.get('/public/info',(req,res)=>{
 // })
 
 // Stage 3: Protected Profile Route with Token Verification
-app.get('/protected/profile',async(req,res)=>{
+app.get('/protected/profile',middleware,async(req,res)=>{
     const bearer=req.headers.authorization
 
     if (!bearer || !bearer.startsWith('Bearer ')) {
