@@ -72,15 +72,35 @@ app.get('/public/info',(req,res)=>{
     return res.status(200).json( {"message": "Welcome stranger! This info is public." })
 })
 //private route
+// app.get('/protected/profile',(req,res)=>{
+//        const bearer=req.headers.authorization
+
+//        if(!bearer || !bearer.startsWith('Bearer ')){
+//         return res.status(401).json({"message":"Access token required"})
+//        }
+//       return res.status(200).json({ message: 'Authorization header presented!' });
+// })
+
+// Stage 3: Protected Profile Route with Token Verification
 app.get('/protected/profile',async(req,res)=>{
-       const bearer=req.headers.authorization
+    const bearer=req.headers.authorization
 
-       if(!bearer || !bearer.startsWith('Bearer ')){
-        return res.status(401).json({"message":"Access token required"})
-       }
-      return res.status(200).json({ message: 'Authorization header presented!' });
+    if (!bearer || !bearer.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+  const toekn =bearer.split(' ')[1]
+  const {data:{user},error}=await supabase.auth.getUser(toekn)
+
+  if (error || !user) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+  return res.status(200).json({
+    id: user.id,
+    email: user.email,
+    created_at: user.created_at
+
+  })
 })
-
 const server=app.listen(PORT ,()=>{
     console.log(`server is running on http://localhost:${PORT}`)
 })
